@@ -1,6 +1,6 @@
-import React, { useEffect, useReducer } from 'react';
-import './lib/data.js';                     // seeds demo data
-import { useStore } from './lib/store.js';
+import React, { useEffect, useReducer, useState } from 'react';
+import { store, useStore } from './lib/store.js';
+import { api, clearSession } from './lib/api.js';
 import { AppProvider, useApp } from './context.jsx';
 import Home from './pages/Home.jsx';
 import AppShell from './components/AppShell.jsx';
@@ -18,7 +18,16 @@ function parseRoute() {
 function Router() {
   const [, force] = useReducer((x) => x + 1, 0);
   const session = useStore('mb_session', null);
+  const [authReady, setAuthReady] = useState(false);
   const { toast, nextAfterLogin } = useApp();
+
+  /* Restore login from the secure backend cookie. */
+  useEffect(() => {
+    api.get('/auth/me')
+      .then((r) => store.set('mb_session', { ...r.data.user, id: r.data.user.id }))
+      .catch(() => clearSession())
+      .finally(() => setAuthReady(true));
+  }, []);
 
   useEffect(() => {
     window.addEventListener('hashchange', force);
@@ -27,7 +36,7 @@ function Router() {
 
   const name = parseRoute();
   const r = name && ROUTES[name];
-  const blocked = !!(r && r.role && (!session || session.role !== r.role));
+  const blocked = !!(authReady && r && r.role && (!session || session.role !== r.role));
 
   useEffect(() => {
     if (blocked) {
@@ -38,6 +47,7 @@ function Router() {
   }, [blocked, name]); // eslint-disable-line
 
   if (!name) return <Home />;
+  if (!authReady && r?.role) return <div className="authwrap"><div className="card"><p>Checking your secure session…</p></div></div>;
   return <AppShell name={blocked ? 'login' : name} />;
 }
 

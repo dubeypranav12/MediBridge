@@ -1,6 +1,6 @@
 /* Helpers for the patient/doctor medical-documents feature.
-   Files are stored as base64 data-URLs inside localStorage (key: mb_docs),
-   so the doctor dashboard can read what the patient uploaded - demo only. */
+   Files are uploaded to the backend (POST /documents) and fetched with the login token. */
+import { api } from './api.js';
 
 export const DOC_TYPES = [
   { v: 'history', label: 'Medical history' },
@@ -12,9 +12,18 @@ export const DOC_TYPES = [
   { v: 'id', label: 'ID proof' },
   { v: 'other', label: 'Other' },
 ];
+/* frontend type  <->  category name used by the backend */
+export const CATEGORY = {
+  history: 'Medical History', lab: 'Lab Report', prescription: 'Prescription', imaging: 'Imaging / Scan',
+  discharge: 'Discharge Summary', insurance: 'Insurance', id: 'ID Proof', other: 'Other',
+};
+const TYPE_OF = Object.fromEntries(Object.entries(CATEGORY).map(([t, c]) => [c, t]));
 export const typeLabel = (v) => (DOC_TYPES.find((t) => t.v === v) || { label: 'Other' }).label.split(' (')[0];
 
-export const MAX_MB = 1.5;                      // browser storage is small, keep files light
+/* backend document -> shape used by the components */
+export const normDoc = (d) => ({ ...d, type: TYPE_OF[d.category] || 'other', mime: d.mimeType, uploadedAt: d.createdAt, ownerId: d.owner });
+
+export const MAX_MB = 10;                          // same limit as the backend
 export const MAX_BYTES = MAX_MB * 1024 * 1024;
 export const ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt';
 const OK_EXT = ACCEPT.split(',').map((e) => e.slice(1));
@@ -41,26 +50,9 @@ export function checkFile(f) {
   return '';
 }
 
-export function readAsDataURL(file) {
-  return new Promise((res, rej) => {
-    const r = new FileReader();
-    r.onload = () => res(r.result);
-    r.onerror = () => rej(new Error('Could not read ' + file.name));
-    r.readAsDataURL(file);
-  });
-}
-
-export function dataUrlToBlob(url) {
-  const [head, b64] = url.split(',');
-  const mime = (head.match(/data:(.*?);/) || [])[1] || 'application/octet-stream';
-  const bin = atob(b64);
-  const arr = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
-  return new Blob([arr], { type: mime });
-}
-
-export function downloadDoc(d) {
-  const url = URL.createObjectURL(dataUrlToBlob(d.data));
+export async function downloadDoc(d) {
+  const blob = await api.blob('/documents/' + d.id + '/file?download=1');
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = d.fileName;
   document.body.appendChild(a); a.click(); a.remove();

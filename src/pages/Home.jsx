@@ -1,16 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { api } from '../lib/api.js';
+import { useFetch } from '../lib/hooks.js';
 
-/* ---------- Smart-match demo data (illustrative) ---------- */
-const MATCH_HOSPITALS = [
-  { n: 'Riverside Heart Institute', km: 3.2, cap: 80, load: 35, s: ['Cardiac', 'Emergency'] },
-  { n: 'City General Hospital', km: 1.8, cap: 60, load: 70, s: ['Trauma', 'Emergency', 'Cardiac'] },
-  { n: 'Lotus Women & Child Care', km: 4.5, cap: 90, load: 25, s: ['Maternity', 'Emergency'] },
-  { n: 'Metro Trauma Centre', km: 2.6, cap: 55, load: 60, s: ['Trauma', 'Emergency'] },
-  { n: 'Sunrise Multispeciality', km: 5.9, cap: 85, load: 30, s: ['Cardiac', 'Maternity', 'Trauma', 'Emergency'] },
-  { n: 'Green Park Clinic', km: 1.2, cap: 40, load: 50, s: ['Emergency', 'Maternity'] },
-];
 const CATS = ['Emergency', 'Cardiac', 'Trauma', 'Maternity'];
-const score = (h) => Math.round(Math.max(0, 100 - h.km * 12) * 0.4 + h.cap * 0.3 + (100 - h.load) * 0.3);
 
 const SIM_STEPS = [
   ['Request', 'Patient request received'],
@@ -96,20 +88,23 @@ function LiveDemo() {
 /* ---------- SMART MATCH ---------- */
 function SmartMatch() {
   const [cat, setCat] = useState('Cardiac');
-  const list = MATCH_HOSPITALS.filter((h) => h.s.includes(cat)).map((h) => ({ ...h, sc: score(h) })).sort((a, b) => b.sc - a.sc);
+  const query = useFetch(() => api.get('/hospitals?care=' + encodeURIComponent(cat) + '&sort=eta'), [cat]);
+  const list = query.data ? query.data.data.hospitals : [];
   return (
     <>
       <div className="chips reveal">{CATS.map((c) => <button key={c} className={'chip' + (c === cat ? ' on' : '')} onClick={() => setCat(c)}>{c}</button>)}</div>
       <div className="hosp">
+        {query.loading && !query.data && <p>Loading connected hospital data…</p>}
+        {query.error && !query.data && <p>Hospital matching is temporarily unavailable.</p>}
         {list.map((h, i) => (
-          <div className="h" key={h.n}><div className="rank">{i + 1}</div>
-            <div><b>{h.n}</b><small>{h.km} km away &middot; {h.s.join(', ')}</small></div>
+          <div className="h" key={h.id}><div className="rank">{i + 1}</div>
+            <div><b>{h.name}</b><small>{h.km} km away &middot; {h.care.join(', ')}</small></div>
             <div className="bars">
-              <div className="bar"><u>Closeness</u><div><i style={{ width: Math.max(0, 100 - h.km * 12) + '%' }}></i></div></div>
-              <div className="bar"><u>Available</u><div><i style={{ width: h.cap + '%' }}></i></div></div>
-              <div className="bar"><u>Low load</u><div><i style={{ width: 100 - h.load + '%' }}></i></div></div>
+              <div className="bar"><u>Closeness</u><div><i style={{ width: Math.max(0, 100 - h.km * 10) + '%' }}></i></div></div>
+              <div className="bar"><u>ICU availability</u><div><i style={{ width: Math.min(100, h.icu * 10) + '%' }}></i></div></div>
+              <div className="bar"><u>Fleet</u><div><i style={{ width: Math.min(100, (h.ambulances?.available || 0) * 20) + '%' }}></i></div></div>
             </div>
-            <div className="score">{h.sc}<small>/100</small></div></div>
+            <div className="score">{h.eta}<small> min</small></div></div>
         ))}
       </div>
     </>
@@ -221,7 +216,7 @@ export default function Home() {
           <h2 className="reveal">Watch one case travel from request to handoff.</h2>
           <p className="sub reveal">Press the button to simulate how a single emergency request moves through six stages, with every step time-stamped.</p>
           <LiveDemo />
-          <p className="note">Simulation for presentation purposes only.</p>
+          <p className="note">Frontend-only presentation simulation. It does not create cases, payments, or ambulance assignments.</p>
         </div>
       </section>
 
@@ -231,7 +226,7 @@ export default function Home() {
           <h2 className="reveal">The right hospital, ranked and explained.</h2>
           <p className="sub reveal">Choose the type of care needed. MediBridge shortlists facilities that offer it, then ranks them by closeness, availability and how busy they are expected to be.</p>
           <SmartMatch />
-          <p className="note">Hospital names and figures are illustrative demo data.</p>
+          <p className="note">Hospital and fleet figures are loaded from the production-connected backend.</p>
         </div>
       </section>
 

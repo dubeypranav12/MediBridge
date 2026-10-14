@@ -1,30 +1,42 @@
-# MediBridge (React)
+# MediBridge frontend
 
-React + Vite version of the MediBridge project. Layout, CSS and behaviour are the same as the original
-HTML/CSS/JS version, with a new **medical documents** feature.
+Production-connected React/Vite client for the MediBridge Express API.
 
-## Run
-    npm install
-    npm run dev        # open the URL shown (usually http://localhost:5173)
-    npm run build      # production build in /dist
+## Run locally
 
-## Demo accounts (password demo1234)
-- Patient: patient@demo.test
-- Doctor:  doctor@demo.test
+```powershell
+Copy-Item .env.example .env
+npm ci
+npm run dev
+```
 
-## New: documents
-- Patient dashboard -> "My medical documents": asked to upload a **medical history** document (required
-  reminder shown until done), plus lab reports, prescriptions, scans, insurance, ID, etc.
-  PDF / JPG / PNG / Word / text, up to 1.5 MB each. View, download and delete your own files.
-- Doctor dashboard -> "Patient documents": every patient's files, filter by patient / type / search,
-  view and download (read-only).
+`.env` must contain:
 
-Data is kept in the browser's localStorage (same as the original demo), so use the same browser
-to see a patient's upload from the doctor account. A real deployment would need a backend + file storage.
+```dotenv
+VITE_API_URL=https://medibridge-3-icg4.onrender.com/api
+```
 
-## Structure
-- src/App.jsx - hash router (same #/routes as before)
-- src/pages/ - Home, Login, Register, Finder, Request, Tracking, Patient, Doctor
-- src/components/ - AppShell (header/sidebar/modal/toast), Documents (new), ui
-- src/lib/ - store (localStorage + live updates), data (hospitals, seed), documents (file helpers)
-- src/index.css - original style.css + a small block for the documents UI
+The app deliberately fails to start or build when `VITE_API_URL` is missing. Set `VITE_API_BASE_URL` only when a deployed response-delay prediction service is available; otherwise that feature displays an unavailable state.
+
+## Authentication and data
+
+- The backend owns authentication in a Secure, SameSite=None, HttpOnly cookie.
+- Every API request uses `credentials: "include"`.
+- No token, user record, case, invoice, document, or draft is persisted in browser storage.
+- Public registration creates patient accounts only. Doctor and driver accounts are administrator-provisioned.
+- Hospital, fleet, case, document, appointment, and invoice records come from the Render API.
+
+## Tracking modes
+
+- **Live Tracking** reads a case from `#/tracking?case=CB-xxxx` and displays only persisted driver GPS. When GPS has not arrived it says **Waiting for driver live location**.
+- **Presentation Simulation** is an isolated frontend-only animation at `#/presentation-tracking`. It makes no API calls and creates no cases, payments, or ambulance assignments.
+
+## Production build
+
+```powershell
+$env:VITE_API_URL='https://medibridge-3-icg4.onrender.com/api'
+npm run build
+npm audit --omit=dev
+```
+
+For Vercel, set `VITE_API_URL` in the Preview and Production environments. Deploy the `frontend-integration` branch as a Preview and verify it before merging to `main`.
