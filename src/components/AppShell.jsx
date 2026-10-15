@@ -1,16 +1,22 @@
 import React, { useEffect } from 'react';
-import { store, useStore } from '../lib/store.js';
+import { useStore } from '../lib/store.js';
+import { clearAuth } from '../lib/api.js';
 import { useApp, go } from '../context.jsx';
 import Login from '../pages/Login.jsx';
 import Register from '../pages/Register.jsx';
 import Finder from '../pages/Finder.jsx';
 import Request from '../pages/Request.jsx';
 import Tracking from '../pages/Tracking.jsx';
+import PresentationTracking from '../pages/PresentationTracking.jsx';
 import Patient from '../pages/Patient.jsx';
 import Doctor from '../pages/Doctor.jsx';
+import DelayPredict from '../pages/DelayPredict.jsx';
+import Driver from '../pages/Driver.jsx';
 
 import { ROUTES } from '../lib/routes.js';
-const PAGES = { login: Login, register: Register, finder: Finder, request: Request, tracking: Tracking, patient: Patient, doctor: Doctor };
+const PAGES = { login: Login, register: Register, finder: Finder, request: Request, tracking: Tracking, 'presentation-tracking': PresentationTracking, patient: Patient, doctor: Doctor, delay: DelayPredict, driver: Driver };
+
+const ROLE_LABEL = { patient: 'Patient', doctor: 'Doctor', driver: 'Driver' };
 
 function AuthBox({ session }) {
   const { toast } = useApp();
@@ -21,8 +27,8 @@ function AuthBox({ session }) {
     <div id="authBox">
       <div className="userchip">
         <div className="avatar">{session.name.charAt(0).toUpperCase()}</div>
-        <div><b>{session.name}</b><small>{session.role === 'doctor' ? 'Doctor' : 'Patient'} &bull; {session.role === 'doctor' ? 'Clinical console' : 'Portal'}</small></div>
-        <button className="b-out b-sm" onClick={() => { window.location.hash = '#/home'; store.del('mb_session'); toast('Logged out'); }}>Logout</button>
+        <div><b>{session.name}</b><small>{ROLE_LABEL[session.role] || 'Patient'} &bull; {session.role === 'doctor' ? 'Clinical console' : session.role === 'driver' ? 'Ambulance crew' : 'Portal'}</small></div>
+        <button className="b-out b-sm" onClick={() => { window.location.hash = '#/home'; clearAuth(); toast('Logged out'); }}>Logout</button>
       </div>
     </div>
   );
@@ -33,15 +39,18 @@ function Sidebar({ session, current }) {
   let title, items;
   if (!session) {
     title = 'Get help';
-    items = [['finder', 'Hospital Finder'], ['request', 'Emergency Request'], ['tracking', 'Live Tracking'], ['login', 'Login'], ['register', 'Register']];
+    items = [['finder', 'Hospital Finder'], ['request', 'Emergency Request'], ['delay', 'Response Delay Prediction'], ['tracking', 'Live Tracking'], ['presentation-tracking', 'Presentation Simulation'], ['login', 'Login'], ['register', 'Register']];
   } else if (session.role === 'patient') {
     title = 'Patient care journey';
-    items = [['patient', 'Patient Dashboard'], ['request', 'Emergency Request'], ['finder', 'Hospital Finder'], ['tracking', 'Live Tracking'],
+    items = [['patient', 'Patient Dashboard'], ['request', 'Emergency Request'], ['finder', 'Hospital Finder'], ['delay', 'Response Delay Prediction'], ['tracking', 'Live Tracking'],
       ['patient', 'My Documents', 'documents'], ['patient', 'Appointments', 'appointments'], ['patient', 'Payments', 'payments']];
+  } else if (session.role === 'driver') {
+    title = 'Ambulance crew';
+    items = [['driver', 'My Ambulance'], ['finder', 'Hospital Finder'], ['tracking', 'Live Tracking']];
   } else {
     title = 'Doctor console';
-    items = [['doctor', 'Doctor Dashboard'], ['doctor', 'Patient Details', 'docPatients'], ['doctor', 'Patient Documents', 'docDocuments'],
-      ['doctor', 'Time Scheduling', 'scheduling'], ['finder', 'Hospital Finder'], ['tracking', 'Live Tracking']];
+    items = [['doctor', 'Doctor Dashboard'], ['doctor', 'Patient Details', 'docPatients'], ['doctor', 'Patient Documents', 'docDocuments'], ['doctor', 'Ambulances', 'ambulances'],
+      ['doctor', 'Time Scheduling', 'scheduling'], ['finder', 'Hospital Finder'], ['delay', 'Response Delay Prediction'], ['tracking', 'Live Tracking']];
   }
   const scrollTo = (e, sc, to) => {
     e.preventDefault();
@@ -82,8 +91,8 @@ export default function AppShell({ name }) {
       </div>
       <header className="a-head">
         <a href="#/home" className="a-logo"><i>&#10010;</i>Medi<b>Bridge</b></a>
-        <span className="tagchip">Delhi NCR Prototype (Simulated)</span>
-        <span className="tagchip warn">&#9679; Simulated Environment &bull; No Live Dispatch</span>
+        <span className="tagchip">Delhi NCR Care Coordination</span>
+        <span className="tagchip warn">&#9679; Connected to MediBridge Backend</span>
         <div className="a-spacer"></div>
         <a href="#/request" className="b-red">SOS &nbsp;Request Emergency Help</a>
         <AuthBox session={session} />

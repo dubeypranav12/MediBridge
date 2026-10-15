@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { store, useStore } from '../lib/store.js';
+import React, { useEffect, useState } from 'react';
+import { useStore } from '../lib/store.js';
+import { api } from '../lib/api.js';
+import { useFetch } from '../lib/hooks.js';
 import { useApp, go } from '../context.jsx';
 import { Seg, Field } from '../components/ui.jsx';
-import { HOSP, bestMatch, hospById } from '../lib/data.js';
 
 const STEPS = ['Patient Bio', 'Triage & Category', 'Pickup Location', 'Review & Dispatch'];
 const SEV_T = { P1: 'P1 Critical', P2: 'P2 Serious', P3: 'P3 Stable' };
@@ -10,19 +11,28 @@ const SEV_T = { P1: 'P1 Critical', P2: 'P2 Serious', P3: 'P3 Stable' };
 export default function Request() {
   const { toast } = useApp();
   const session = useStore('mb_session', null);
-  const draft = store.get('mb_draft', {});
   const [step, setStep] = useState(1);
   const [bad, setBad] = useState({});
   const [gps, setGps] = useState(null);
   const [gpsMsg, setGpsMsg] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [best, setBest] = useState(null);
+  const hospQ = useFetch(() => api.get('/hospitals'), []);
+  const HOSP = hospQ.data ? hospQ.data.data.hospitals : [];
   const [f, setF] = useState(() => ({
     name: session && session.role === 'patient' ? session.name : '', age: '', sex: 'Male', phone: '', rel: 'Self',
-    care: 'Emergency', sev: 'P2', sym: '', hosp: draft.hospital || 'auto', addr: '', land: '', consent: false,
+    care: 'Emergency', sev: 'P2', sym: '', hosp: new URLSearchParams(window.location.hash.split('?')[1] || '').get('hospital') || 'auto', addr: '', land: '', consent: false,
   }));
   const set = (k, v) => setF((p) => ({ ...p, [k]: v }));
   const inp = (k) => ({ value: f[k], onChange: (e) => set(k, e.target.value) });
 
-  const chosen = () => (f.hosp === 'auto' ? bestMatch(f.care) : hospById(f.hosp));
+  /* "Best match" is decided by the server */
+  useEffect(() => {
+    if (step !== 4 || f.hosp !== 'auto') return;
+    setBest(null);
+    api.get('/hospitals/best-match?care=' + f.care).then((r) => setBest(r.data.hospital)).catch(() => setBest(null));
+  }, [step, f.care, f.hosp]);
+  const chosen = () => (f.hosp === 'auto' ? best : HOSP.find((x) => x.id === f.hosp) || null);
 
   function validate(n) {
     let b = {};
@@ -33,19 +43,26 @@ export default function Request() {
     return !Object.values(b).some(Boolean);
   }
 
-  function sendRequest() {
-    const h = chosen(), id = 'CB-' + (2000 + Math.floor(Math.random() * 7999));
-    const c = { id, created: Date.now(), name: f.name.trim(), age: f.age, sex: f.sex, phone: f.phone.trim(), rel: f.rel, care: f.care, sev: f.sev,
-      symptoms: f.sym.trim(), address: f.addr.trim(), gps, hospital: h.id, stage: 0, stageStart: Date.now() };
-    store.set('mb_cases', [c, ...store.get('mb_cases', [])]);
-    store.set('mb_active', c.id);
-    store.set('mb_inv', [{ id: 'INV-' + (3000 + Math.floor(Math.random() * 6999)), service: 'Ambulance request ' + id, amount: 1500, status: 'Pending', method: '' }, ...store.get('mb_inv', [])]);
-    store.del('mb_draft');
-    toast('Request sent. Case ' + id + ' created.');
-    go('tracking');
+  async function sendRequest() {
+    setBusy(true);
+    try {
+      const r = await api.post('/cases', { body: {
+        name: f.name.trim(), age: +f.age, sex: f.sex, phone: f.phone.trim(), rel: f.rel, care: f.care, sev: f.sev,
+        symptoms: f.sym.trim(), hospital: f.hosp, address: f.addr.trim(), landmark: f.land.trim(), gps, consent: f.consent,
+      } });
+      toast(r.message || 'Request sent.');
+      go('tracking?case=' + encodeURIComponent(r.data.case.caseId));
+    } catch (ex) {
+      const e = ex.errors || {};
+      if (e.name || e.age || e.phone || e.sex) { setStep(1); setBad({ name: !!e.name, age: !!e.age, phone: !!e.phone }); }
+      else if (e.address) { setStep(3); setBad({ addr: true }); }
+      toast(ex.message);
+    }
+    setBusy(false);
   }
 
   const next = () => {
+    if (busy) return;
     if (!validate(step)) { toast('Please complete the highlighted fields.'); return; }
     if (step < 4) { setStep(step + 1); setBad({}); return; }
     sendRequest();
@@ -66,7 +83,7 @@ export default function Request() {
   const summary = step === 4 ? [
     ['Patient', f.name.trim() + ', ' + f.age + ' (' + f.sex + ')'], ['Callback', '+91 ' + f.phone.trim()], ['Caller', f.rel],
     ['Care needed', f.care], ['Priority', SEV_T[f.sev]], ['Symptoms', f.sym.trim() || 'Not provided'],
-    ['Pickup', f.addr.trim() + (f.land.trim() ? ' (' + f.land.trim() + ')' : '')], ['Hospital', h.name + (f.hosp === 'auto' ? ' (best match)' : '')],
+    ['Pickup', f.addr.trim() + (f.land.trim() ? ' (' + f.land.trim() + ')' : '')], ['Hospital', h ? h.name + (f.hosp === 'auto' ? ' (best match)' : '') : 'Finding the best match…'],
   ] : [];
 
   return (
@@ -74,7 +91,7 @@ export default function Request() {
       <div className="alert" style={{ marginBottom: 16 }}>
         <div><div className="eyebrow-a" style={{ color: '#fff', opacity: 0.85 }}>Immediate life threat advisory</div>
           <h3>For life-threatening emergencies, call 112 or 102 now.</h3>
-          <p>This prototype demonstrates how a request would be coordinated. It does not dispatch a real ambulance.</p></div>
+          <p>MediBridge coordinates the digital request. Always call emergency services directly when every second matters.</p></div>
         <div className="acts"><a className="b-out" href="tel:112">Call 112</a></div>
       </div>
       <div className="card">
@@ -145,8 +162,8 @@ export default function Request() {
             )}
             <div className="formnav">
               <button type="button" className="b-out" style={{ visibility: step === 1 ? 'hidden' : 'visible' }} onClick={() => { setBad({}); setStep(step - 1); }}>Back</button>
-              <span className="small muted">All data stays in this browser (demo).</span>
-              <button type="button" className={step === 4 ? 'b-red' : 'b-primary'} onClick={next}>{step === 4 ? 'Send emergency request' : 'Continue'}</button>
+              <span className="small muted">Your request is sent to the MediBridge server.</span>
+              <button type="button" className={step === 4 ? 'b-red' : 'b-primary'} onClick={next} disabled={busy}>{step === 4 ? (busy ? 'Sending…' : 'Send emergency request') : 'Continue'}</button>
             </div>
           </form>
         </div>

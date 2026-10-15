@@ -321,7 +321,7 @@ body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);
 .app .etabox b{font-size:18px;color:var(--teal2)}
 .app .etabox small{display:block;font-size:11.5px;color:var(--muted)}
 .app .hcard h3{font-size:19px;margin:10px 0 2px;color:var(--navy)}
-.app .metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;background:var(--soft);border-radius:10px;padding:12px;margin:14px 0}
+.app .metrics{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;background:var(--soft);border-radius:10px;padding:12px;margin:14px 0}
 .app .metrics small{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
 .app .metrics b{font-size:14.5px}
 .app .metrics .g{color:#047857}
@@ -448,3 +448,35 @@ body{font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--text);
 .app .modal.wide{max-width:760px}
 .app .sbox.three{grid-template-columns:1.2fr 1fr 1fr;margin-bottom:12px}
 @media(max-width:640px){.app .sbox.three{grid-template-columns:1fr}}
+
+
+/* =====================================================================
+   NEW: Ambulance Response Delay Prediction page
+   ===================================================================== */
+.app .pred-fields{border:0;padding:0;margin:0;min-width:0}
+.app .pred-fields:disabled{opacity:.65}
+.app .pred-card{min-height:230px}
+.app .pred-state{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:28px 10px;color:var(--text)}
+.app .pred-error{align-items:flex-start;text-align:left;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;padding:16px;margin-top:10px;color:#991b1b}
+.app .pred-error p{font-size:13.5px;margin-bottom:6px}
+.app .pred-label{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px}
+.app .delay-big{display:flex;align-items:baseline;gap:8px;color:var(--teal2)}
+.app .delay-big b{font-size:56px;line-height:1;font-weight:800;letter-spacing:-.02em}
+.app .delay-big span{font-size:18px;font-weight:700;color:var(--navy2)}
+.app .pred-range{margin-top:8px;font-size:14px;color:var(--text)}
+.app .spin{width:30px;height:30px;border:3px solid var(--line);border-top-color:var(--teal2);border-radius:50%;animation:predspin .8s linear infinite;display:inline-block}
+.app .spin.sm{width:14px;height:14px;border-width:2px;border-color:rgba(7,26,43,.25);border-top-color:var(--navy);vertical-align:-2px}
+@keyframes predspin{to{transform:rotate(360deg)}}
+.app select:disabled,.app input:disabled{background:var(--base);cursor:not-allowed}
+
+/* ---- ambulances, driver page, consent & audit ---- */
+.app .ambgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.app .ambgrid div{background:var(--soft);border:1px solid #cfe7ec;border-radius:10px;padding:10px 12px}
+.app .ambgrid small{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase}
+.app .ambgrid b{font-size:20px}
+.app .amb-status{border:1px solid var(--line);border-radius:8px;padding:5px 8px;font-size:12.5px;background:#fff}
+.app .consentbox{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;background:var(--soft);border:1px solid #cfe7ec;border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.app .consentbox b{display:block}
+.app .logrow{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.app .logrow small{color:var(--muted)}
+@media (max-width:700px){.app .ambgrid{grid-template-columns:1fr 1fr}}
