@@ -40,7 +40,7 @@ export default function Login() {
         <h1>Welcome back</h1>
         <p className="muted" style={{ marginBottom: 20 }}>Sign in to open your dashboard.</p>
         <form onSubmit={submit} noValidate>
-          <Field label="I am a"><Seg value={role} onChange={setRole} options={[['patient', 'Patient'], ['doctor', 'Doctor'], ['driver', 'Driver']]} /></Field>
+          <Field label="I am a"><Seg value={role} onChange={setRole} options={[['patient', 'Patient'], ['doctor', 'Doctor'], ['driver', 'Driver'], ['admin', 'Administrator']]} /></Field>
           <Field label="Email or phone" htmlFor="lUser"><input id="lUser" type="text" autoComplete="username" value={id} onChange={(e) => setId(e.target.value)} /></Field>
           <Field label="Password" htmlFor="lPass"><input id="lPass" type="password" autoComplete="current-password" value={pw} onChange={(e) => setPw(e.target.value)} /></Field>
           <p className="err">{err}</p>

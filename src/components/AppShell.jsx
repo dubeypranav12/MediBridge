@@ -12,11 +12,12 @@ import Patient from '../pages/Patient.jsx';
 import Doctor from '../pages/Doctor.jsx';
 import DelayPredict from '../pages/DelayPredict.jsx';
 import Driver from '../pages/Driver.jsx';
+import Admin from '../pages/Admin.jsx';
 
 import { ROUTES } from '../lib/routes.js';
-const PAGES = { login: Login, register: Register, finder: Finder, request: Request, tracking: Tracking, 'presentation-tracking': PresentationTracking, patient: Patient, doctor: Doctor, delay: DelayPredict, driver: Driver };
+const PAGES = { login: Login, register: Register, finder: Finder, request: Request, tracking: Tracking, 'presentation-tracking': PresentationTracking, patient: Patient, doctor: Doctor, delay: DelayPredict, driver: Driver, admin: Admin };
 
-const ROLE_LABEL = { patient: 'Patient', doctor: 'Doctor', driver: 'Driver' };
+const ROLE_LABEL = { patient: 'Patient', doctor: 'Doctor', driver: 'Driver', admin: 'Administrator' };
 
 function AuthBox({ session }) {
   const { toast } = useApp();
@@ -27,7 +28,7 @@ function AuthBox({ session }) {
     <div id="authBox">
       <div className="userchip">
         <div className="avatar">{session.name.charAt(0).toUpperCase()}</div>
-        <div><b>{session.name}</b><small>{ROLE_LABEL[session.role] || 'Patient'} &bull; {session.role === 'doctor' ? 'Clinical console' : session.role === 'driver' ? 'Ambulance crew' : 'Portal'}</small></div>
+        <div><b>{session.name}</b><small>{ROLE_LABEL[session.role] || 'Patient'} &bull; {session.role === 'doctor' ? 'Clinical console' : session.role === 'driver' ? 'Ambulance crew' : session.role === 'admin' ? 'Staff approvals' : 'Portal'}</small></div>
         <button className="b-out b-sm" onClick={() => { window.location.hash = '#/home'; clearAuth(); toast('Logged out'); }}>Logout</button>
       </div>
     </div>
@@ -44,6 +45,9 @@ function Sidebar({ session, current }) {
     title = 'Patient care journey';
     items = [['patient', 'Patient Dashboard'], ['request', 'Emergency Request'], ['finder', 'Hospital Finder'], ['delay', 'Response Delay Prediction'], ['tracking', 'Live Tracking'],
       ['patient', 'My Documents', 'documents'], ['patient', 'Appointments', 'appointments'], ['patient', 'Payments', 'payments']];
+  } else if (session.role === 'admin') {
+    title = 'Administration';
+    items = [['admin', 'Doctor & driver approvals'], ['finder', 'Hospital Finder']];
   } else if (session.role === 'driver') {
     title = 'Ambulance crew';
     items = [['driver', 'My Ambulance'], ['finder', 'Hospital Finder'], ['tracking', 'Live Tracking']];

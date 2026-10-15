@@ -23,7 +23,8 @@ The app deliberately fails to start or build when `VITE_API_URL` is missing. Set
 - The backend owns authentication in a Secure, SameSite=None, HttpOnly cookie.
 - Every API request uses `credentials: "include"`.
 - No token, user record, case, invoice, document, or draft is persisted in browser storage.
-- Public registration creates patient accounts only. Doctor and driver accounts are administrator-provisioned.
+- Patient registration creates a session immediately. Doctor and driver registrations wait for administrator approval and receive no session until approved.
+- Administrators can review pending, approved, and rejected staff from the protected `#/admin` dashboard; administrator accounts are provisioned privately on the backend.
 - Hospital, fleet, case, document, appointment, and invoice records come from the Render API.
 
 ## Tracking modes
@@ -39,4 +40,4 @@ npm run build
 npm audit --omit=dev
 ```
 
-For Vercel, set `VITE_API_URL` in the Preview and Production environments. Deploy the `frontend-integration` branch as a Preview and verify it before merging to `main`.
+For Vercel, set `VITE_API_URL` in the Preview and Production environments. Deploy a reviewed feature branch as a Preview and verify it before merging to `main`.
